@@ -167,7 +167,6 @@ forge test -vvv
 ## Contact
 For any inquiries, reach out via:
 
-📧 Email: [dev@atrnd.io]<br>
 📬 Telegram: [@at_rnd](https://t.me/at_rnd)
 
 ## 📜 License
