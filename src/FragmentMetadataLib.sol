@@ -3,44 +3,45 @@ pragma solidity ^0.8.28;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
-import {WorldState} from "./WorldState.sol";
+import {FragmentWorldState} from "./FragmentWorldState.sol";
 
-/// @title Fragment Metadata Library
-/// @author ATrnd
-/// @notice Library for handling Fragment NFT metadata generation and encoding
-/// @dev Provides utilities for constructing NFT metadata URIs and JSON formatting
-/// @dev Implements ERC721 metadata standard with custom attributes
+/**
+ * @title Fragment Metadata Library
+ * @author ATrnd
+ * @notice Library for handling Fragment NFT metadata generation and manipulation
+ * @dev Provides functions for creating and formatting NFT metadata including attributes and URIs
+ */
 library FragmentMetadataLib {
     using Strings for uint256;
 
-    /// @notice Structure containing all metadata for a fragment
-    /// @param worldState The current state enum from WorldState contract
-    /// @param nftId The ID of the complete NFT this fragment belongs to
-    /// @param fragmentId The unique identifier of this fragment within its NFT
-    /// @param tokenId The ERC721 token ID of this fragment
+    /**
+     * @notice Structure containing all metadata for a Fragment NFT
+     * @param fragmentWorldState Current world state of the fragment
+     * @param fragmentNftId ID of the complete NFT this fragment belongs to
+     * @param fragmentId Unique identifier within the fragment set (1-4)
+     * @param fragmentTokenId Token ID of this specific fragment
+     */
     struct FragmentMetadata {
-        WorldState.WorldState_s worldState;
-        uint256 nftId;
+        FragmentWorldState.WorldState fragmentWorldState;
+        uint256 fragmentNftId;
         uint256 fragmentId;
-        uint256 tokenId;
+        uint256 fragmentTokenId;
     }
 
-    /// @notice Creates the complete base64 encoded token URI
-    /// @dev Combines image URI and attributes into a base64 encoded JSON string
-    /// @dev Format follows OpenSea metadata standards
-    /// @param baseUri Base IPFS URI where fragment images are stored
-    /// @param metadata Fragment metadata structure containing all necessary data
-    /// @return Base64 encoded JSON string containing complete token metadata
-    function createTokenURI(
-        string memory baseUri,
-        FragmentMetadata memory metadata
-    ) internal pure returns (string memory) {
-        string memory imageUri = _constructImageURI(baseUri, metadata);
-        string memory attributes = _constructAttributes(metadata);
+    /**
+     * @notice Creates a complete token URI for a Fragment NFT
+     * @dev Generates a base64 encoded JSON string containing all metadata
+     * @param baseUri Base URI for the token's image
+     * @param metadata Struct containing all fragment metadata
+     * @return Complete token URI as a base64 encoded JSON string
+     */
+    function createTokenURI(string memory baseUri, FragmentMetadata memory metadata) internal pure returns (string memory) {
+        string memory imageUri = constructImageURI(baseUri, metadata);
+        string memory attributes = constructAttributes(metadata);
 
         bytes memory jsonData = abi.encodePacked(
             '{',
-            '"name": "Fragment #', metadata.tokenId.toString(), '",',
+            '"name": "Fragment #', metadata.fragmentTokenId.toString(), '",',
             '"description": "Fragment NFT for collection",',
             '"image": "', imageUri, '",',
             '"attributes": ', attributes,
@@ -55,20 +56,19 @@ library FragmentMetadataLib {
         );
     }
 
-    /// @notice Constructs the IPFS image URI for a fragment
-    /// @dev Combines base URI with fragment identifiers to create unique image path
-    /// @param baseUri Base IPFS URI where images are stored
-    /// @param metadata Fragment metadata containing necessary IDs
-    /// @return Complete IPFS URI string pointing to fragment's image
-    function _constructImageURI(
-        string memory baseUri,
-        FragmentMetadata memory metadata
-    ) private pure returns (string memory) {
+    /**
+     * @notice Constructs the image URI for a fragment
+     * @dev Combines base URI with fragment identifiers
+     * @param baseUri Base URI for the image storage location
+     * @param metadata Fragment metadata containing ID information
+     * @return Complete image URI string
+     */
+    function constructImageURI(string memory baseUri, FragmentMetadata memory metadata) internal pure returns (string memory) {
         return string(
             abi.encodePacked(
                 baseUri,
                 "/",
-                metadata.nftId.toString(),
+                metadata.fragmentNftId.toString(),
                 "_",
                 metadata.fragmentId.toString(),
                 ".json"
@@ -76,33 +76,32 @@ library FragmentMetadataLib {
         );
     }
 
-    /// @notice Constructs the attributes JSON array for the fragment
-    /// @dev Creates standardized metadata attributes following OpenSea format
-    /// @param metadata Fragment metadata containing all attribute values
-    /// @return JSON string containing formatted attributes array
-    function _constructAttributes(
-        FragmentMetadata memory metadata
-    ) private pure returns (string memory) {
+    /**
+     * @notice Creates a JSON array of attributes for the fragment
+     * @dev Generates metadata attributes including world state and IDs
+     * @param metadata Fragment metadata to generate attributes from
+     * @return JSON string containing all fragment attributes
+     */
+    function constructAttributes(FragmentMetadata memory metadata) internal pure returns (string memory) {
         return string(
             abi.encodePacked(
                 '[',
-                _createAttribute("World State", _worldStateToString(metadata.worldState)), ',',
-                _createAttribute("NFT ID", metadata.nftId.toString()), ',',
-                _createAttribute("Fragment ID", metadata.fragmentId.toString()),
+                createAttribute("World State", worldStateToString(metadata.fragmentWorldState)), ',',
+                createAttribute("NFT ID", metadata.fragmentNftId.toString()), ',',
+                createAttribute("Fragment ID", metadata.fragmentId.toString()),
                 ']'
             )
         );
     }
 
-    /// @notice Creates a single metadata attribute JSON object
-    /// @dev Formats a key-value pair as a trait object
-    /// @param traitType The name/type of the attribute
-    /// @param value The value of the attribute
-    /// @return JSON string for a single attribute
-    function _createAttribute(
-        string memory traitType,
-        string memory value
-    ) private pure returns (string memory) {
+    /**
+     * @notice Creates a single attribute object for metadata
+     * @dev Formats a trait type and value as a JSON object
+     * @param traitType The name/type of the attribute
+     * @param value The value of the attribute
+     * @return JSON string representing the attribute
+     */
+    function createAttribute(string memory traitType, string memory value) internal pure returns (string memory) {
         return string(
             abi.encodePacked(
                 '{"trait_type": "', traitType, '", "value": "', value, '"}'
@@ -110,17 +109,17 @@ library FragmentMetadataLib {
         );
     }
 
-    /// @notice Converts WorldState enum to its string representation
-    /// @dev Maps each enum value to its corresponding string name
-    /// @param state The WorldState enum to convert
-    /// @return String representation of the world state
-    function _worldStateToString(
-        WorldState.WorldState_s state
-    ) private pure returns (string memory) {
-        if (state == WorldState.WorldState_s.NEXUS) return "NEXUS";
-        if (state == WorldState.WorldState_s.FLUX) return "FLUX";
-        if (state == WorldState.WorldState_s.CORE) return "CORE";
-        if (state == WorldState.WorldState_s.GEAR) return "GEAR";
+    /**
+     * @notice Converts world state enum to string representation
+     * @dev Maps FragmentWorldState enum values to their string equivalents
+     * @param worldState The world state to convert
+     * @return String representation of the world state
+     */
+    function worldStateToString(FragmentWorldState.WorldState worldState) internal pure returns (string memory) {
+        if (worldState == FragmentWorldState.WorldState.NEXUS) return "NEXUS";
+        if (worldState == FragmentWorldState.WorldState.FLUX) return "FLUX";
+        if (worldState == FragmentWorldState.WorldState.CORE) return "CORE";
+        if (worldState == FragmentWorldState.WorldState.GEAR) return "GEAR";
         return "UNKNOWN";
     }
 }
